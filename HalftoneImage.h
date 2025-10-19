@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 
 template <typename T>
 class HalftoneImage {
@@ -31,29 +32,6 @@ public:
 	size_t get_width() const;
 	size_t get_height() const;
 };
-
-//Getters
-template <typename T>
-size_t HalftoneImage<T>::get_width() const {
-	return width;
-}
-
-template <typename T>
-size_t HalftoneImage<T>::get_height() const {
-	return height;
-}
-
-//Output operator
-template <typename T>
-std::ostream& operator<<(std::ostream& ostream, const HalftoneImage<T>& src) {
-	for (size_t i = 0; i < src.get_height(); ++i) {
-		for (size_t j = 0; j < src.get_width(); ++j) {
-			ostream << src(i, j);
-		}
-		ostream << "\n";
-	}
-	return ostream;
-}
 
 //Constructor
 template <typename T>
@@ -113,6 +91,35 @@ HalftoneImage<T>& HalftoneImage<T>::operator=(const HalftoneImage& src) {
 	return *this;
 }
 
+//Equality operator
+template <typename T>
+bool HalftoneImage<T>::operator==(const HalftoneImage<T>& src) const {
+	if (width != src.width || height != src.height) {
+		return false;
+	}
+
+	for (size_t i = 0; i < width * height; ++i) {
+		if constexpr (std::is_same_v<T, float>) {
+			if (std::abs(data[i] - src.data[i]) > precision) {
+				return false;
+			}
+		}
+		else {
+			if (data[i] != src.data[i]) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+//Inequality operator
+template <typename T>
+bool HalftoneImage<T>::operator!=(const HalftoneImage& src) const {
+	return !(*this == src);
+}
+
 //Functor operator (write)
 template <typename T>
 T& HalftoneImage<T>::operator()(size_t row, size_t column) {
@@ -131,4 +138,104 @@ const T& HalftoneImage<T>::operator()(size_t row, size_t column) const {
 	}
 
 	return data[row * width + column];
+}
+
+//Addition scalar operator
+template <typename T>
+HalftoneImage<T> HalftoneImage<T>::operator+(const T& scalar) const {
+	HalftoneImage<T> result(width, height);
+
+	for (size_t i = 0; i < width * height; ++i) {
+		if constexpr (std::is_same_v<T, bool>) {
+			result.data[i] = data[i] || static_cast<bool>(scalar);
+		}
+		else if constexpr (std::is_same_v<T, float>) {
+			result.data[i] = data[i] + scalar;
+		}
+		else {
+			//upper limit
+			if (scalar > 0 && data[i] > std::numeric_limits<T>::max() - scalar) {
+				result.data[i] = std::numeric_limits<T>::max();
+			}
+			//lower limit
+			else if (scalar < 0 && data[i] < std::numeric_limits<T>::min() - scalar) {
+				result.data[i] = std::numeric_limits<T>::min();
+			}
+			else {
+				result.data[i] = data[i] + scalar;
+			}
+		}
+	}
+	
+	return result;
+}
+
+//Multiplication scalar operator
+template <typename T>
+HalftoneImage<T> HalftoneImage<T>::operator*(const T& scalar) const {
+	HalftoneImage<T> result(width, height);
+
+	for (size_t i = 0; i < width * height; ++i) {
+		if constexpr (std::is_same_v<T, bool>) {
+			result.data[i] = data[i] && static_cast<bool>(scalar);
+		}
+		else if constexpr (std::is_same_v<T, float>) {
+			result.data[i] = data[i] * scalar;
+		}
+		else {
+			long long result_value = static_cast<long long>(data[i]) * static_cast<long long>(scalar);
+
+			if (result_value > std::numeric_limits<T>::max()) {
+				result.data[i] = std::numeric_limits<T>::max();
+			}
+			else if (result_value < std::numeric_limits<T>::min()) {
+				result.data[i] = std::numeric_limits<T>::min();
+			}
+			else {
+				result.data[i] = data[i] * scalar;
+			}
+		}
+	}
+
+	return result;
+}
+
+//Inversion operator
+template <typename T>
+HalftoneImage<T> HalftoneImage<T>::operator!() const {
+	HalftoneImage<T> result(width, height);
+
+	for (size_t i = 0; i < width * height; ++i) {
+		if constexpr (std::is_same_v<T, bool>) {
+			result.data[i] = !data[i];
+		}
+		else {
+			result.data[i] = -data[i];
+		}
+	}
+
+	return result;
+}
+
+//Output operator
+template <typename T>
+std::ostream& operator<<(std::ostream& ostream, const HalftoneImage<T>& src) {
+	for (size_t i = 0; i < src.get_height(); ++i) {
+		for (size_t j = 0; j < src.get_width(); ++j) {
+			ostream << src(i, j);
+		}
+		ostream << "\n";
+	}
+	return ostream;
+}
+
+//Getters
+template <typename T>
+size_t HalftoneImage<T>::get_width() const {
+	return width;
+}
+
+template <typename T>
+size_t HalftoneImage<T>::get_height() const {
+	return height;
 }
